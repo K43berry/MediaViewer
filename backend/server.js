@@ -31,9 +31,13 @@ const storage = new GridFsStorage({
     file: (req, file) => {
         return new Promise((resolve, reject) => {
             const allowedVideoFormats = /mp4|mov|avi|mkv/;
-            
-            if (!allowedVideoFormats.test(path.extname(file.originalname).toLowerCase())) {
-                return reject(new Error('Only video files are allowed.'));
+            const allowedImageFormats = /jpg|jpeg|png|gif/;
+
+            const isVideo = allowedVideoFormats.test(path.extname(file.originalname).toLowerCase());
+            const isImage = allowedImageFormats.test(path.extname(file.originalname).toLowerCase());
+
+            if (!isVideo && !isImage) {
+                return reject(new Error('Only video and image files are allowed.'));
             }
 
             crypto.randomBytes(16, (err, buf) => {
@@ -43,17 +47,16 @@ const storage = new GridFsStorage({
                 }
 
                 const filename = buf.toString('hex') + path.extname(file.originalname);
-                const filenameWithoutExt = path.basename(file.originalname, path.extname(file.originalname));  
 
                 const fileInfo = {
                     filename: filename,
-                    bucketName: 'videos', 
+                    bucketName: 'videos',
                     metadata: {
-                        title: filenameWithoutExt || 'Untitled'
+                        isThumbnail: isImage 
                     }
                 };
 
-                resolve(fileInfo); 
+                resolve(fileInfo);
             });
         });
     }
@@ -61,19 +64,46 @@ const storage = new GridFsStorage({
 
 const upload = multer({ storage });
 
-app.post('/upload', upload.single('file'), async (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
+app.post('/upload', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'thumbnail', maxCount: 1 }]), async (req, res) => {
+    if (!req.files['file'] || !req.files['thumbnail']) {
+        return res.status(400).json({ message: "Both video and thumbnail files are required" });
     }
-    res.json({
-        message: "Upload success",
-        file: req.file,
-    });
+
+    const videoFile = req.files['file'][0];
+    const thumbnailFile = req.files['thumbnail'][0];
+
+
+    try {
+        const videoFileId = videoFile.id; 
+
+      
+        await conn.db.collection('videos.files').updateOne(
+            { _id: videoFileId },
+            {
+                $set: {
+                    'metadata.title': req.body.title,  
+                    'metadata.thumbnail': thumbnailFile  
+                }
+            }
+        );
+        
+
+        res.status(200).json({
+            message: "Upload success",
+            title: req.body.title,
+            video: videoFile,
+            thumbnail: thumbnailFile
+        });
+    } catch (err) {
+        console.error("Error updating video metadata:", err);
+        res.status(500).json({ message: "Error updating metadata", error: err.message });
+    }
 });
+
 
 app.get('/getVideos', async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1; 
+        const page = parseInt(req.query.page) || 1;
         const pageSize = 10;
         const skip = (page - 1) * pageSize;
 
@@ -88,18 +118,32 @@ app.get('/getVideos', async (req, res) => {
             return res.status(404).json({ message: 'No videos found' });
         }
 
-        const totalVideos = await bucket.find({ contentType: { $regex: /^video/ } }).count();
+        const totalVideos = await conn.db.collection('videos.files').countDocuments({
+            contentType: { $regex: /^video/ }
+        });
+
+        const videoData = await Promise.all(videos.map(async (video) => {
+            const thumbnailFilename = video.metadata?.thumbnail.filename;
+
+            let thumbnailUrl = null;
+            if (thumbnailFilename) {
+                thumbnailUrl = `/thumbnail?filename=${thumbnailFilename}`;
+            }
+
+            return {
+                filename: video.filename,
+                videoTitle: video.metadata?.title,
+                thumbnailUrl,
+                uploadDate: video.uploadDate,
+                contentType: video.contentType,
+            };
+        }));
 
         res.json({
             page,
             pageSize,
             totalVideos,
-            videos: videos.map(video => ({
-                filename: video.filename,
-                videoTitle: video.metadata?.title,
-                uploadDate: video.uploadDate,
-                contentType: video.contentType,
-            }))
+            videos: videoData
         });
     } catch (err) {
         console.error('Error retrieving videos:', err);
@@ -178,10 +222,34 @@ app.get('/video', async (req, res) => {
     }
 });
 
-app.get('/test', async (req, res) => {
-    res.json({
-        message: "hello"
-    })
+app.get('/thumbnail', async (req, res) => {
+    const { filename } = req.query;
+
+    try {
+        const cursor = bucket.find({ filename });
+        const [file] = await cursor.toArray();
+
+        if (!file) {
+            return res.status(404).json({ message: 'Thumbnail not found' });
+        }
+
+        if (!file.contentType.startsWith('image/')) {
+            return res.status(400).json({ message: 'The requested file is not an image' });
+        }
+
+        res.setHeader('Content-Type', file.contentType);
+        const downloadStream = bucket.openDownloadStreamByName(filename);
+
+        downloadStream.on('error', (error) => {
+            console.error('Error streaming thumbnail:', error);
+            res.status(500).json({ message: 'Error streaming thumbnail', error: error.message });
+        });
+
+        downloadStream.pipe(res);
+    } catch (error) {
+        console.error('Error retrieving thumbnail:', error);
+        res.status(500).json({ message: 'Error retrieving thumbnail', error: error.message });
+    }
 });
 
 const PORT = 8080;
