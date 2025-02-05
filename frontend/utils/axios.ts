@@ -56,4 +56,17 @@ export const uploadVideo = async (file: File, title: string) => {
     throw error;
   }
 };
+
+export const fetchThumbnail = async (filename: string) => {
+  try {
+    const response = await api.get(`/thumbnail?filename=${filename}`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching video:', error);
+    throw error;
+  }
+};
+
 export default api;

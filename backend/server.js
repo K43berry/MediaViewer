@@ -12,13 +12,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cors());
 
-// MongoDB connection URI
 const mongoURI = 'mongodb://localhost:27017/';
 
-// Connect to MongoDB
 const conn = mongoose.createConnection(mongoURI);
 
-// Initialize GridFSBucket
 let bucket;
 conn.once('open', () => {
     bucket = new GridFSBucket(conn.db, {
@@ -125,15 +122,10 @@ app.get('/getVideos', async (req, res) => {
         const videoData = await Promise.all(videos.map(async (video) => {
             const thumbnailFilename = video.metadata?.thumbnail.filename;
 
-            let thumbnailUrl = null;
-            if (thumbnailFilename) {
-                thumbnailUrl = `/thumbnail?filename=${thumbnailFilename}`;
-            }
-
             return {
                 filename: video.filename,
                 videoTitle: video.metadata?.title,
-                thumbnailUrl,
+                thumbnailFilename,
                 uploadDate: video.uploadDate,
                 contentType: video.contentType,
             };
