@@ -1,7 +1,8 @@
 "use client";
-import { fetchThumbnail } from '../../utils/axios';
+import { fetchThumbnail, deleteVideo } from '../../utils/axios';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Delete } from 'lucide-react'
 
 interface VideoData {
   filename: string;
@@ -14,6 +15,7 @@ const VideoHolder = ({ data }: { data: VideoData }) => {
   const [thumbnail, setThumbnail] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [admin, setAdmin] = useState(true) //change later
 
   //console.log(JSON.stringify(data, null, 2))
 
@@ -45,32 +47,46 @@ const VideoHolder = ({ data }: { data: VideoData }) => {
     router.push(`/watch?filename=${data.filename}`);
   };
 
+  const del = async () => {
+    await deleteVideo(data.filename)
+    router.push('/')
+  }
+
   if (loading) return <div>Loading thumbnail...</div>;
   if (error) return <div>{error}</div>;
 
   return (
-    <div 
-      className="relative group cursor-pointer transform transition-transform duration-200 hover:scale-95"
-      onClick={handleClick}
-    > 
+    <div>
+      <div 
+        className="relative group cursor-pointer transform transition-transform duration-200 hover:scale-95"
+        onClick={handleClick}
+      > 
 
-      {thumbnail && (
-        <>
-          <img
-            src={thumbnail}
-            alt={data.videoTitle || "Video Thumbnail"}
-            className="w-full object-cover rounded-lg" 
-            style={{
-              aspectRatio: "16/9",
-            }}
-          />
-          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-opacity duration-200 rounded-lg flex items-end">
-            <div className="text-white p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              <h3 className="text-lg font-semibold">{data.videoTitle || "Untitled Video"}</h3>
+        {thumbnail && (
+          <>
+            <img
+              src={thumbnail}
+              alt={data.videoTitle || "Video Thumbnail"}
+              className="w-full object-cover rounded-lg" 
+              style={{
+                aspectRatio: "16/9",
+              }}
+            />
+            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-opacity duration-200 rounded-lg flex items-end">
+              <div className="text-white p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <h3 className="text-lg font-semibold">{data.videoTitle || "Untitled Video"}</h3>
+              </div>
             </div>
+          </>
+        )}
+      </div>
+      {admin && (
+        <button onClick={del}>
+          <div className="flex text-white text-sm hover:text-red-400" >
+              Delete This Video
           </div>
-        </>
-      )}
+        </button>
+         ) }
     </div>
   );
 };

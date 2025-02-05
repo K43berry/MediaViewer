@@ -79,6 +79,7 @@ app.post('/upload', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'thumb
             {
                 $set: {
                     'metadata.title': req.body.title,  
+                    'metadata.description': req.body.description,
                     'metadata.thumbnail': thumbnailFile  
                 }
             }
@@ -101,10 +102,13 @@ app.post('/upload', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'thumb
 app.get('/getVideos', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const pageSize = 10;
+        const pageSize = parseInt(req.query.pageSize) || 10;
         const skip = (page - 1) * pageSize;
 
-        const cursor = bucket.find({ contentType: { $regex: /^video/ } })
+        const searchTerm = req.query.search || '';
+        const titleFilter = searchTerm ? { 'metadata.title': { $regex: searchTerm, $options: 'i' } } : {};
+
+        const cursor = bucket.find({ contentType: { $regex: /^video/ }, ...titleFilter })
             .sort({ uploadDate: -1 })
             .skip(skip)
             .limit(pageSize);
@@ -116,7 +120,8 @@ app.get('/getVideos', async (req, res) => {
         }
 
         const totalVideos = await conn.db.collection('videos.files').countDocuments({
-            contentType: { $regex: /^video/ }
+            contentType: { $regex: /^video/ },
+            ...titleFilter
         });
 
         const videoData = await Promise.all(videos.map(async (video) => {
@@ -125,6 +130,7 @@ app.get('/getVideos', async (req, res) => {
             return {
                 filename: video.filename,
                 videoTitle: video.metadata?.title,
+                description: video.metadata?.description,
                 thumbnailFilename,
                 uploadDate: video.uploadDate,
                 contentType: video.contentType,
@@ -241,6 +247,37 @@ app.get('/thumbnail', async (req, res) => {
     } catch (error) {
         console.error('Error retrieving thumbnail:', error);
         res.status(500).json({ message: 'Error retrieving thumbnail', error: error.message });
+    }
+});
+
+app.delete('/video', async (req, res) => {
+    try {
+        const filename = req.query.filename;
+
+        if (!filename) {
+            return res.status(400).json({ message: 'Filename is required' });
+        }
+
+        const video = await bucket.find({ filename }).toArray();
+
+        if (video.length === 0) {
+            return res.status(404).json({ message: 'Video not found' });
+        }
+
+        const videoFile = video[0];
+
+        await conn.db.collection('videos.chunks').deleteMany({ files_id: videoFile._id });
+
+        await conn.db.collection('videos.files').deleteOne({ _id: videoFile._id });
+
+        if (videoFile.metadata?.thumbnail) {
+            await conn.db.collection('videos.files').deleteOne({ filename: videoFile.metadata.thumbnail.filename });
+        }
+
+        res.status(200).json({ message: 'Video and associated chunks deleted successfully' });
+    } catch (err) {
+        console.error('Error deleting video:', err);
+        res.status(500).json({ message: 'Error deleting video', error: err.message });
     }
 });
 

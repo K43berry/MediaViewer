@@ -6,6 +6,7 @@ import { fetchVideo } from '../../utils/axios';
 export default function WatchPage() {
   const searchParams = useSearchParams();
   const filename = searchParams.get('filename');
+
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,16 +53,18 @@ export default function WatchPage() {
   }
 
   return (
-    <div className="flex justify-center min-h-screen bg-black">
-      <div className="w-full max-w-6xl p-4">
-        <video 
-          controls 
-          autoPlay
-          className="w-full rounded-lg shadow-lg"
-        >
-          <source src={videoUrl} type="video/mp4" />
-          Your browser does not support the video tag.
-        </video>
+    <div>
+      <div className="my-10 flex justify-center">
+        <div className="w-full max-w-xl p-4 bg-neutral-700 ">
+          <video 
+            controls 
+            autoPlay
+            className="w-full rounded-lg shadow-lg "
+          >
+            <source src={videoUrl} type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+        </div>
       </div>
     </div>
   );

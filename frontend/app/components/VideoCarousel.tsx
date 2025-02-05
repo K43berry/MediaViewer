@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 interface Video {
   filename: string;
   videoTitle: string;
+  description: string;
   thumbnailFilename: string;
   uploadDate: string;
   contentType: string;
@@ -19,7 +20,12 @@ interface VideosResponse {
   videos: Video[];
 }
 
-const VideoCarousel = ({num} : {num: number}) => {
+interface props {
+    num: number;
+    search: string;
+}
+
+const VideoCarousel = (info: props) => {
     const [videos, setVideos] = useState<VideosResponse | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
@@ -33,7 +39,7 @@ const VideoCarousel = ({num} : {num: number}) => {
             setLoading(true);
             setError(null);
             try {
-                const data = await fetchVideos(num);
+                const data = await fetchVideos(info.num, info.search);
                 setVideos(data);
             } catch (err) {
                 console.error("Error fetching videos:", err);
@@ -43,7 +49,7 @@ const VideoCarousel = ({num} : {num: number}) => {
             }
         }
         getVideos()
-    }, [num])
+    }, [info.num])
 
     const nextSlide = () => {
         if (videos?.videos) {
@@ -88,11 +94,10 @@ const VideoCarousel = ({num} : {num: number}) => {
                 </div>
             </div>
 
-            {/* Navigation buttons */}
             {currentIndex > 0 && (
                 <button 
                     onClick={prevSlide}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 bg-black/50 p-2 rounded-full text-white 
+                    className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/50 p-2 rounded-full text-white 
                              hover:bg-black/75 z-10"
                 >
                     <ChevronLeft size={24} />
@@ -101,7 +106,7 @@ const VideoCarousel = ({num} : {num: number}) => {
             {currentIndex < totalVideos - videosPerPage && (
                 <button 
                     onClick={nextSlide}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 bg-black/50 p-2 rounded-full text-white 
+                    className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/50 p-2 rounded-full text-white 
                              hover:bg-black/75 z-10"
                 >
                     <ChevronRight size={24} />
