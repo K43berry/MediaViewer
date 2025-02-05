@@ -2,10 +2,11 @@
 import {Drum, Search, Clapperboard, Upload} from 'lucide-react'
 import {useRouter} from 'next/navigation'
 import {useState} from 'react'
+import isAdmin from '../admin'
 
 const NavBar = () =>{
 
-    const [admin, setAdmin] = useState(true) //change later
+    const [admin, setAdmin] = useState(isAdmin)
 
     const router = useRouter();
 
@@ -34,9 +35,9 @@ const NavBar = () =>{
                     <Search size={24} color="white"/>
                 </button>
                 {admin && ( <>
-                <button>
+                {/* <button>
                     <Clapperboard size={24} color="white"/>
-                </button>
+                </button> */}
                 <button onClick={upl}>
                     <Upload size={24} color="white"/>
                 </button>

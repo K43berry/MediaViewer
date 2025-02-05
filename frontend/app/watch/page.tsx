@@ -1,14 +1,17 @@
 "use client";
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { fetchVideo } from '../../utils/axios';
+import { fetchVideo, fetchVideos } from '../../utils/axios';
 
 export default function WatchPage() {
   const searchParams = useSearchParams();
-  const filename = searchParams.get('filename');
+  const filename = searchParams.get('filename') || undefined;
+  const title = searchParams.get('title') || undefined;
+  const desc = searchParams.get('desc') || undefined;
 
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
 
   useEffect(() => {
     const loadVideo = async () => {
@@ -26,7 +29,6 @@ export default function WatchPage() {
         setError('Failed to load video');
       }
     };
-
     loadVideo();
 
     return () => {
@@ -35,6 +37,7 @@ export default function WatchPage() {
       }
     };
   }, [filename]);
+
 
   if (error) {
     return (
@@ -52,18 +55,26 @@ export default function WatchPage() {
     );
   }
 
+  console.log(title, desc)
+
   return (
     <div>
       <div className="my-10 flex justify-center">
-        <div className="w-full max-w-xl p-4 bg-neutral-700 ">
+        <div className="w-full max-w-5xl p-4 bg-neutral-700 ">
           <video 
             controls 
             autoPlay
-            className="w-full rounded-lg shadow-lg "
+            className="w-full rounded-lg shadow-lg mb-6"
           >
             <source src={videoUrl} type="video/mp4" />
             Your browser does not support the video tag.
           </video>
+          <h1 className="text-white text-3xl">
+            {title}
+          </h1>
+          <h2 className="text-gray-400">
+            {desc}
+          </h2>
         </div>
       </div>
     </div>

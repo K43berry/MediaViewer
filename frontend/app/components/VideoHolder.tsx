@@ -2,12 +2,15 @@
 import { fetchThumbnail, deleteVideo } from '../../utils/axios';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Delete } from 'lucide-react'
+import isAdmin from '../admin'
 
 interface VideoData {
   filename: string;
+  description: string;
   videoTitle: string;
   thumbnailFilename: string;
+  uploadDate: string;
+  contentType: string;
 }
 
 const VideoHolder = ({ data }: { data: VideoData }) => {
@@ -15,7 +18,9 @@ const VideoHolder = ({ data }: { data: VideoData }) => {
   const [thumbnail, setThumbnail] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [admin, setAdmin] = useState(true) //change later
+
+  const [admin, setAdmin] = useState(isAdmin)
+
 
   //console.log(JSON.stringify(data, null, 2))
 
@@ -44,7 +49,7 @@ const VideoHolder = ({ data }: { data: VideoData }) => {
   }, []);
 
   const handleClick = () => {
-    router.push(`/watch?filename=${data.filename}`);
+    router.push(`/watch?filename=${data.filename}&title=${data.videoTitle}&desc=${data.description}`);
   };
 
   const del = async () => {

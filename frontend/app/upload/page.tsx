@@ -46,12 +46,12 @@ export default function Upload() {
       setVideo(null);
       setThumbnail(null);
 
-      // Fetch the video to verify if it's uploaded correctly
-      const data = await fetchVideos(1, title); // Assuming title is used to search the uploaded video
+   
+      const data = await fetchVideos(1, title); 
       if (data.videos.length === 0) {
         setError('Error, Video not found');
       } else {
-        setVideoData(data.videos[0]); // Pass the first video object, not the whole response
+        setVideoData(data.videos[0]);
         setVideoDataFound(true);
       }
     } catch (err) {
